@@ -46,14 +46,21 @@ func main() {
 			return nil
 		},
 	}
+
+	type genPasswordFlags struct {
+		disableSpecial bool
+	}
+	genPassFlags := genPasswordFlags{}
 	generatePassword := &cobra.Command{
 		Use:  "generate-password",
 		Args: cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			password := pgstate.GeneratePassword()
+			passwordCfg := pgstate.GenPasswordConfig{AllowSpecial: !genPassFlags.disableSpecial}
+			password := pgstate.GeneratePasswordWithConfig(passwordCfg)
 			fmt.Printf("Len %d -- %q\n", len(password), password)
 		},
 	}
+	generatePassword.Flags().BoolVarP(&genPassFlags.disableSpecial, "allow-special", "s", false, "Disable using special characters")
 
 	root := &cobra.Command{
 		Use:           "pgstate",

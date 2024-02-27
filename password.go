@@ -37,17 +37,29 @@ func (c classSpec) choose(entropy *rand.Rand, target *strings.Builder, base, max
 }
 
 func GeneratePassword() string {
+	cfg := GenPasswordConfig{AllowSpecial: true}
+	return GeneratePasswordWithConfig(cfg)
+}
+
+type GenPasswordConfig struct {
+	AllowSpecial bool
+}
+
+func GeneratePasswordWithConfig(config GenPasswordConfig) string {
 	alphaLower := classSpec{class: lowerCassClass, maxRun: 16, remaining: 64}
 	alphaUpper := classSpec{class: upperCaseClass, maxRun: 16, remaining: 64}
 	digits := classSpec{class: digitClass, maxRun: 4, remaining: 32}
-	special := classSpec{class: specialClass, maxRun: 4, remaining: 16}
+	classes := []*classSpec{&alphaLower, &alphaUpper, &digits}
+	if config.AllowSpecial {
+		special := classSpec{class: specialClass, maxRun: 4, remaining: 16}
+		classes = append(classes, &special)
+	}
 
 	entropy := rand.New(rand.NewSource(time.Now().Unix()))
 	size := 64
 	limit := size
 	output := &strings.Builder{}
 	output.Grow(size)
-	classes := []*classSpec{&alphaLower, &alphaUpper, &digits, &special}
 	base := 0
 	for base < limit {
 		classIndex := entropy.Intn(len(classes))
