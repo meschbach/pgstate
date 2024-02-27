@@ -47,28 +47,13 @@ func main() {
 		},
 	}
 
-	type genPasswordFlags struct {
-		disableSpecial bool
-	}
-	genPassFlags := genPasswordFlags{}
-	generatePassword := &cobra.Command{
-		Use:  "generate-password",
-		Args: cobra.ExactArgs(0),
-		Run: func(cmd *cobra.Command, args []string) {
-			passwordCfg := pgstate.GenPasswordConfig{AllowSpecial: !genPassFlags.disableSpecial}
-			password := pgstate.GeneratePasswordWithConfig(passwordCfg)
-			fmt.Printf("Len %d -- %q\n", len(password), password)
-		},
-	}
-	generatePassword.Flags().BoolVarP(&genPassFlags.disableSpecial, "allow-special", "s", false, "Disable using special characters")
-
 	root := &cobra.Command{
 		Use:           "pgstate",
 		SilenceErrors: true,
 	}
 	root.AddCommand(ensure)
 	root.AddCommand(drop)
-	root.AddCommand(generatePassword)
+	root.AddCommand(generatePasswordCommand())
 	rootFlags := root.PersistentFlags()
 	rootFlags.StringVarP(&pgxConnectionConfig, "cluster", "c", "", "Connection string conforming to PGX DSN")
 
