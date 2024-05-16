@@ -1,0 +1,57 @@
+name: Go
+
+on: [push]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        go-version: [ '1.21', '1.22' ]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Build and run unit tests with Go ${{ matrix.go-version }}
+        run: |
+          go test .
+          go build -o pgstate ./cmd
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Run integration tests
+        run: |
+          docker run --publish 5432:5432 --name pg -e POSTGRES_PASSWORD=mysecretpassword --detach postgres
+          timeout 60s sh -c 'until docker ps | grep pg | grep -q Up; do echo "Waiting for postgres to be healthy..."; sleep 2; done'
+          ./pgstate ensure-database test-db test1234
+          ./pgstate drop-database test-db
+  publish_images:
+    runs-on: ubuntu-latest
+    needs: [tests]
+    if: github.triggering_actor == 'meschbach' &&  (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    timeout-minutes: 5
+    # needed for version bumping
+    permissions:
+          contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@v1 # Don't use @master or @v1 unless you're happy to test the latest version
+        id: version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # if you don't want to set write permissions use a PAT token
+          WITH_V: true
+          DEFAULT_BUMP: patch
+      - name: Github Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          fail_on_unmatched_files: true
+          generate_release_notes: true
