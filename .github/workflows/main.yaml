@@ -28,6 +28,8 @@ jobs:
         run: |
           docker run --publish 5432:5432 --name pg -e POSTGRES_PASSWORD=mysecretpassword --detach postgres
           timeout 60s sh -c 'until docker ps | grep pg | grep -q Up; do echo "Waiting for postgres to be healthy..."; sleep 2; done'
+          docker ps -a
+          sleep 5
           ./pgstate --cluster "postgres://postgres:mysecretpassword@127.0.0.1:5432/postgres" ensure test-db test1234
           ./pgstate --cluster "postgres://postgres:mysecretpassword@127.0.0.1:5432/postgres" drop test-db
   publish_images:
